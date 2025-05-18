@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Math Master: Университетская 3D-Игра</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at center, #0d0d0d 0%, #1a1a2e 100%);
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .container {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 0 40px #0ff, 0 0 100px #00f inset;
+      transform: rotateX(5deg) rotateY(5deg);
+      transition: transform 0.5s;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px #0ff;
+    }
+
+    .question-box {
+      background: #222;
+      padding: 30px;
+      font-size: 1.8rem;
+      border-radius: 15px;
+      margin-bottom: 30px;
+      box-shadow: 0 0 20px rgba(0,255,255,0.3);
+      animation: pulse 3s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 15px #0ff; }
+      50% { box-shadow: 0 0 40px #0ff; }
+      100% { box-shadow: 0 0 15px #0ff; }
+    }
+
+    .answers {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .answer-btn {
+      background: #111;
+      color: #0ff;
+      padding: 20px 30px;
+      border: 2px solid #0ff;
+      font-size: 1.5rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+      box-shadow: 0 0 10px #0ff;
+    }
+
+    .answer-btn:hover {
+      background: #0ff;
+      color: #000;
+      transform: scale(1.1);
+      box-shadow: 0 0 20px #0ff;
+    }
+
+    .answer-btn.wrong {
+      animation: flash 0.3s alternate 4;
+    }
+
+    @keyframes flash {
+      0% { background: #f00; color: #fff; }
+      100% { background: #000; color: #f00; }
+    }
+
+    .score {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      color: #aaa;
+    }
+
+    audio {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Math Master</h1>
+    <div class="question-box" id="questionBox">Вопрос...</div>
+    <div class="answers" id="answers"></div>
+    <div class="score">Счёт: <span id="score">0</span></div>
+  </div>
+
+  <!-- Звуки -->
+  <audio id="correctSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_f3ac7b4aa5.mp3" preload="auto"></audio>
+  <audio id="wrongSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_bff6d4e1ec.mp3" preload="auto"></audio>
+  <audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_bfc1e9cfaa.mp3?filename=cyberpunk-108929.mp3" autoplay loop preload="auto"></audio>
+
+  <script>
+    const questionBox = document.getElementById('questionBox');
+    const answersBox = document.getElementById('answers');
+    const scoreDisplay = document.getElementById('score');
+    const correctSound = document.getElementById('correctSound');
+    const wrongSound = document.getElementById('wrongSound');
+    const bgMusic = document.getElementById('bgMusic');
+
+    let score = 0;
+
+    const operations = [
+      () => {
+        const a = Math.floor(Math.random() * 10 + 1);
+        const b = Math.floor(Math.random() * 10 + 1);
+        return {
+          question: `${a}² + ${b}² = ?`,
+          answer: a ** 2 + b ** 2
+        };
+      },
+      () => {
+        const a = Math.floor(Math.random() * 100 + 1);
+        return {
+          question: `√${a ** 2} = ?`,
+          answer: a
+        };
+      },
+      () => {
+        const a = Math.floor(Math.random() * 3 + 2);
+        const b = Math.floor(Math.random() * 3 + 2);
+        return {
+          question: `${a}^${b} = ?`,
+          answer: Math.pow(a, b)
+        };
+      },
+      () => {
+        const a = Math.floor(Math.random() * 10 + 1);
+        return {
+          question: `log₁₀(${10 ** a}) = ?`,
+          answer: a
+        };
+      },
+      () => {
+        const a = Math.floor(Math.random() * 5 + 2);
+        return {
+          question: `ln(e^${a}) = ?`,
+          answer: a
+        };
+      },
+      () => {
+        const a = Math.floor(Math.random() * 10 + 1);
+        return {
+          question: `Интеграл от x по dx от 0 до ${a} = ?`,
+          answer: 0.5 * a ** 2
+        };
+      }
+    ];
+
+    function generateQuestion() {
+      const operation = operations[Math.floor(Math.random() * operations.length)];
+      const { question, answer } = operation();
+      const correct = Math.round(answer * 100) / 100;
+
+      questionBox.textContent = question;
+
+      const answers = [correct];
+      while (answers.length < 3) {
+        let variation = +(correct + (Math.random() * 10 - 5)).toFixed(2);
+        if (!answers.includes(variation)) {
+          answers.push(variation);
+        }
+      }
+
+      answers.sort(() => Math.random() - 0.5);
+      answersBox.innerHTML = '';
+
+      answers.forEach(ans => {
+        const btn = document.createElement('button');
+        btn.className = 'answer-btn';
+        btn.textContent = ans;
+        btn.onclick = () => checkAnswer(ans, correct, btn);
+        answersBox.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(selected, correct, button) {
+      if (Math.abs(selected - correct) < 0.01) {
+        correctSound.play();
+        score++;
+        scoreDisplay.textContent = score;
+        setTimeout(generateQuestion, 400);
+      } else {
+        wrongSound.play();
+        button.classList.add('wrong');
+        setTimeout(() => button.classList.remove('wrong'), 800);
+      }
+    }
+
+    window.onload = () => {
+      generateQuestion();
+      bgMusic.volume = 0.3;
+    };
+  </script>
+</body>
+</html>
